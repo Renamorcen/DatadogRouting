@@ -14,10 +14,12 @@ import	(
 	"io/ioutil"
 	"encoding/csv"
 	"bytes"
+	"strconv"
 )
 
+//linkedlist 
 type geocode struct{
-	id int
+	id	int
 	brewery_id int
 	lat float32
 	lon float32
@@ -37,12 +39,11 @@ func main(){
 	geocodes, err := reader.ReadAll()
 	fmt.Println(lat+"/"+lon)
 	fmt.Printf("%s",geocodes[2][1])
-	entryNumber:=len(geocodes)
-	//Todo: implement linkedList, sukurti panasias strukturas kitiem data, tada gal processint pradesiu
-	var geocodeArr[entryNumber] geocode
+	geocodeSlice :=  make([]geocode, len(geocodes))
 	for i:=range geocodes{
-		geocodeArr[i]:=geocode(geocodes[i][0], geocodes[i][1], geocodes[i][2], geocodes[i][3], geocores[i][4])
-		fmt.Println(geocodes[i][2])
+		id := strconv
+		geocodeC:=geocode{strconv.Atoi(geocodes[i][0]), geocodes[i][1], geocodes[i][2], geocodes[i][3], geocodes[i][4]}
+		//fmt.Println(geocodes[i][4])
 	}
 	if err!=nil{
 		fmt.Println(err)
