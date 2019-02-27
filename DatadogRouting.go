@@ -9,7 +9,7 @@
 package main
 
 import	(
-	"os"
+	//"os"
 	"fmt"
 	"io/ioutil"
 	"encoding/csv"
@@ -25,21 +25,25 @@ type geocode struct{
 	lon		float64
 	accuracy	string
 }
-
+//Struktura alaus databazei
+type beer struct{
+	id		int
+	brewery_id	int
+	name		string
+	cat_id		int
+	style_id	int
+}
 //Dummy code algoritmui
 
 func greedyAlg(long, lat int) int{
 	return 0
 }
 
-func main(){
-	lon := os.Args[1]
-	lat := os.Args[2]
+func parseGeocodes() []geocode {
 	B_geocodes, err := ioutil.ReadFile("dumps/geocodes.csv")
 	reader := csv.NewReader(bytes.NewReader(B_geocodes))
 	geocodes, err := reader.ReadAll()
-	fmt.Println(lat+"/"+lon)
-	geocodeSlice :=  make([]geocode, len(geocodes))
+	var geocodeSlice []geocode
 	for i:=range geocodes{
 		if i!=0{
 			id, err		:= strconv.Atoi(geocodes[i][0])
@@ -51,11 +55,23 @@ func main(){
 				fmt.Println(err)
 			}
 			geocodeC:=geocode{id, brewery_id, lat, lon, accuracy}
-			geocodeSlice[i-1] = geocodeC
+			geocodeSlice = append(geocodeSlice,geocodeC)
 		}
 	}
-	fmt.Println(geocodeSlice[1].lat)
 	if err!=nil{
 		fmt.Println(err)
 	}
+	return geocodeSlice
+}
+
+func main(){
+	//lon := os.Args[1]
+	//lat := os.Args[2]
+	//Parsinu geocodes.csv
+	geocodeSlice := parseGeocodes()
+	fmt.Println(geocodeSlice[1].lat)
+	//Parsinu beers.csv
+	//if err!=nil{
+	//	fmt.Println(err)
+	//}
 }
