@@ -1,10 +1,13 @@
+//
 //DatadogRouting.go
-//Vytenis pirma karta naudoja Go, nes panasi i C
+//
+//Vytenis pirma karta naudoja Go, nes panasi i C, tad sansas kazka ismokti
 //Vytenis Sliogeris
 //Saltiniai sintaksei:
 //https://www.tutorialspoint.com/go/
 //https://gobyexample.com/command-line-arguments
 //https://golang.org/
+//Problema panasi i knapsack problema, tad kazka bandysim
 
 package main
 
@@ -24,6 +27,7 @@ type geocode struct{
 	lat		float64
 	lon		float64
 	accuracy	string
+	beers		[]beer
 }
 //Struktura alaus databazei
 type beer struct{
@@ -79,14 +83,36 @@ func parseGeocodes() []geocode {
 			lat, err	:= strconv.ParseFloat(S_geocodes[i][2], 32)
 			lon, err	:= strconv.ParseFloat(S_geocodes[i][3], 32)
 			accuracy	:= S_geocodes[i][4]
+			var beerSlice	[]beer
 			if err!=nil{
 				fmt.Println(err)
 			}
-			geocodeObj:=geocode{id, brewery_id, lat, lon, accuracy}
+			geocodeObj:=geocode{id, brewery_id, lat, lon, accuracy, beerSlice}
 			geocodeSlice = append(geocodeSlice,geocodeObj)
 		}
 	}
 	return geocodeSlice
+}
+
+func bindBeersToBreweries(geocodeSlice []geocode, beerSlice []beer) []geocode{
+	outputGeocodeSlice := geocodeSlice
+	for i:=range beerSlice{
+		for j:=range geocodeSlice{
+			if beerSlice[i].brewery_id ==geocodeSlice[j].brewery_id{
+				outputBeerSlice := append(geocodeSlice[j].beers,beerSlice[i])
+				geocodeSlice[j].beers = outputBeerSlice
+			}
+		}
+	}
+	return outputGeocodeSlice
+}
+
+
+func PrintBeers(slice geocode){
+	beerSlice := slice.beers
+	for i:=range beerSlice{
+		fmt.Println(beerSlice[i].name)
+	}
 }
 
 func main(){
@@ -95,10 +121,11 @@ func main(){
 	fmt.Println(lon + "/" + lat)
 	//parsinu beers.csv
 	beerSlice := parseBeers()
-	fmt.Println(beerSlice[1].name)
 	//Parsinu geocodes.csv
 	geocodeSlice := parseGeocodes()
-	fmt.Println(geocodeSlice[1].lat)
+
+	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
+	PrintBeers(boundSlice[1])
 	//Parsinu beers.csv
 	//if err!=nil{
 	//	fmt.Println(err)
