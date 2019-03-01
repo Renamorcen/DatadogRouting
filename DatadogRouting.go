@@ -125,9 +125,5 @@ func main(){
 	geocodeSlice := parseGeocodes()
 
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
-	PrintBeers(boundSlice[1])
-	//Parsinu beers.csv
-	//if err!=nil{
-	//	fmt.Println(err)
-	//}
+	PrintBeers(boundSlice[2])
 }
