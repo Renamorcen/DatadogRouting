@@ -18,6 +18,7 @@ import	(
 	"encoding/csv"
 	"bytes"
 	"strconv"
+	"math"
 )
 
 //Struktura laikyti viena lokacijos entry
@@ -38,10 +39,6 @@ type beer struct{
 	style_id	int
 }
 //Dummy code algoritmui
-
-func greedyAlg(long, lat int) int{
-	return 0
-}
 
 func getStrings(location string) [][]string{
 	B_content, err := ioutil.ReadFile(location)
@@ -114,11 +111,29 @@ func PrintBeers(slice geocode){
 		fmt.Println(beerSlice[i].name)
 	}
 }
+func toRadians(deg float64) float64{
+	return deg*math.Pi/180
+}
+//Pritaikau Inverse Haversine formule
+func calcDist(lon1, lat1, lon2, lat2 float64) float64{
+	var dist float64
+	lon1R := toRadians(lon1)
+	lon2R := toRadians(lon2)
+	lat1R := toRadians(lat1)
+	lat2R := toRadians(lat2)
+	R := 6371.0 //zemes spindulys kilometrais
+	dist = 2.0 * R * math.Asin(math.Sqrt(math.Sin((lat2R-lat1R)/2)*math.Sin((lat2R-lat1R)/2) + math.Cos(lat1R)*math.Cos(lat2R)*math.Sin((lon2R-lon1R)/2)*math.Sin((lon2R-lon1R)/2)))
+	return dist
+}
+
+func greedyAlg(lon, lat float64, boundSlice []geocode) {
+	fmt.Println("ur mum gay")
+}
 
 func main(){
-	lon := os.Args[1]
-	lat := os.Args[2]
-	fmt.Println(lon + "/" + lat)
+	lon,err := strconv.ParseFloat(os.Args[1],32)
+	lat,err := strconv.ParseFloat(os.Args[2],32)
+	fmt.Println(lon)
 	//parsinu beers.csv
 	beerSlice := parseBeers()
 	//Parsinu geocodes.csv
@@ -126,4 +141,8 @@ func main(){
 
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
 	PrintBeers(boundSlice[2])
+	greedyAlg(lon, lat, boundSlice)
+	if err!= nil{
+		fmt.Println(err)
+	}
 }
