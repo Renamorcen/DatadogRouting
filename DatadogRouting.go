@@ -181,9 +181,37 @@ func findNeighbourhood(lat,lon float64, boundSlice []geocode) []geocode{
 	return neighbourhood
 }
 
-func greedyAlg(lat, lon float64, boundSlice []geocode) {
+func getBeerCount(loc geocode)int{
+	return len(loc.beers)
+}
+
+func greedyAlg(lat, lon float64, boundSlice []geocode) []geocode {
 	neighbourhood := findNeighbourhood(lat,lon, boundSlice)
-	fmt.Println(len(neighbourhood))
+	fuel := 2000.0
+	var optimalPath []geocode
+	var beerCount int
+	home :=geocode{-1, -1, lat, lon, "", nil, "Home"}
+	optimalPath, beerCount = recursiveSoln(home, home, neighbourhood, optimalPath, fuel,0)
+	fmt.Println(beerCount)
+	return optimalPath
+}
+//SF (beercountSF, optimalpathSF) reiskia So Far, kad atskirti variables
+func recursiveSoln(currentLoc, home geocode, neighbourhood, optimalPathSF []geocode, fuel float64, beercountSF int) ([]geocode, int){
+	if calcDist(home.lat, home.lon, currentLoc.lat, currentLoc.lon) < fuel || len(neighbourhood)==0{
+		return optimalPathSF, beercountSF //base case
+	}
+
+	var optimalPath []geocode
+	beerCount := beercountSF
+
+	for i:=range neighbourhood{
+		optimalPathI, beerCountI := recursiveSoln(neighbourhood[i], home, append(neighbourhood[:i], neighbourhood[i+1:]...), append(optimalPathSF, neighbourhood[i]), fuel-calcDist(currentLoc.lat, currentLoc.lon, neighbourhood[i].lat, neighbourhood[i].lon), getBeerCount(neighbourhood[i]))
+		if beerCountI > beerCount{
+			optimalPath = optimalPathI
+			beerCount = beerCountI
+		}
+	}
+	return optimalPath, beerCount
 }
 
 func main(){
@@ -198,7 +226,8 @@ func main(){
 
 	geocodeSlice = assignNames(geocodeSlice)
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
-	greedyAlg(lat, lon, boundSlice)
+	solution := greedyAlg(lat, lon, boundSlice)
+	fmt.Println(solution)
 	//greedyAlg(lon, lat, boundSlice)
 	if err!= nil{
 		fmt.Println(err)
