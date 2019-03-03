@@ -29,6 +29,7 @@ type geocode struct{
 	lon		float64
 	accuracy	string
 	beers		[]beer
+	name		string
 }
 //Struktura alaus databazei
 type beer struct{
@@ -84,8 +85,27 @@ func parseGeocodes() []geocode {
 			if err!=nil{
 				fmt.Println(err)
 			}
-			geocodeObj:=geocode{id, brewery_id, lat, lon, accuracy, beerSlice}
+			geocodeObj:=geocode{id, brewery_id, lat, lon, accuracy, beerSlice, ""}
 			geocodeSlice = append(geocodeSlice,geocodeObj)
+		}
+	}
+	return geocodeSlice
+}
+
+func assignNames(in []geocode) []geocode{
+	S_breweries	:= getStrings("dumps/breweries.csv")
+	geocodeSlice	:= in
+	for i:= range S_breweries{
+		if i!=0{
+			brew_id, err := strconv.Atoi(S_breweries[i][0])
+			if err!=nil{
+				fmt.Println(err)
+			}
+			for j:=range geocodeSlice{
+				if geocodeSlice[j].brewery_id == brew_id{
+					geocodeSlice[j].name = S_breweries[i][1]
+				}
+			}
 		}
 	}
 	return geocodeSlice
@@ -114,6 +134,10 @@ func PrintBeers(slice geocode){
 func toRadians(deg float64) float64{
 	return deg*math.Pi/180
 }
+
+func toDegree(rad float64) float64{
+	return rad * 180 / math.Pi
+}
 //Pritaikau Inverse Haversine formule
 func calcDist(lon1, lat1, lon2, lat2 float64) float64{
 	var dist float64
@@ -126,8 +150,25 @@ func calcDist(lon1, lat1, lon2, lat2 float64) float64{
 	return dist
 }
 
+func findNeighbourhood(lon,lat float64, boundSlice []geocode) []geocode{
+	var d float64
+	d = 2000/6371
+	latMin :=math.Asin(math.Sin(toRadians(lat))* math.Cos(d) + math.Cos(toRadians(lat))*math.Sin(d)*math.Cos(0))
+	latMax :=math.Asin(math.Sin(toRadians(lat))* math.Cos(d) + math.Cos(toRadians(lat))*math.Sin(d)*math.Cos(math.Pi))
+
+	lonMin :=toRadians(lon) + math.Atan2(math.Sin(math.Pi/2)*math.Sin(d)*math.Cos(toRadians(lat)), math.Cos(d)-(math.Sin(toRadians(lat))*math.Sin(toRadians(lat))))
+	lonMax :=toRadians(lon) + math.Atan2(math.Sin(math.Pi*3/2)*math.Sin(d)*math.Cos(toRadians(lat)), math.Cos(d)-(math.Sin(toRadians(lat))*math.Sin(toRadians(lat))))
+	fmt.Println(toDegree(latMin))
+	fmt.Println(toDegree(latMax))
+	fmt.Println(toDegree(lonMin))
+	fmt.Println(toDegree(lonMax))
+	return boundSlice
+}
+
 func greedyAlg(lon, lat float64, boundSlice []geocode) {
 	fmt.Println("ur mum gay")
+	neighbourhood := findNeighbourhood(lon, lat, boundSlice)
+	fmt.Println(neighbourhood[0])
 }
 
 func main(){
@@ -139,7 +180,9 @@ func main(){
 	//Parsinu geocodes.csv
 	geocodeSlice := parseGeocodes()
 
+	geocodeSlice = assignNames(geocodeSlice)
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
+	fmt.Println(geocodeSlice[0].name)
 	PrintBeers(boundSlice[2])
 	greedyAlg(lon, lat, boundSlice)
 	if err!= nil{
