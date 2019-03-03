@@ -139,41 +139,57 @@ func toDegree(rad float64) float64{
 	return rad * 180 / math.Pi
 }
 //Pritaikau Inverse Haversine formule
-func calcDist(lon1, lat1, lon2, lat2 float64) float64{
+func calcDist(lat1, lon1, lat2, lon2 float64) float64{
 	var dist float64
-	lon1R := toRadians(lon1)
-	lon2R := toRadians(lon2)
-	lat1R := toRadians(lat1)
-	lat2R := toRadians(lat2)
-	R := 6371.0 //zemes spindulys kilometrais
-	dist = 2.0 * R * math.Asin(math.Sqrt(math.Sin((lat2R-lat1R)/2)*math.Sin((lat2R-lat1R)/2) + math.Cos(lat1R)*math.Cos(lat2R)*math.Sin((lon2R-lon1R)/2)*math.Sin((lon2R-lon1R)/2)))
+	lon1R	:= toRadians(lon1)
+	lon2R	:= toRadians(lon2)
+	lat1R	:= toRadians(lat1)
+	lat2R	:= toRadians(lat2)
+	a	:= math.Sin((lat2R-lat1R)/2)*math.Sin((lat2R-lat1R)/2) + math.Cos(lat1R)*math.Cos(lat2R) * math.Sin((lon2R-lon1R)/2)*math.Sin((lon2R-lon1R)/2)
+	c	:= 2 *  math.Atan2(math.Sqrt(a),math.Sqrt(1-a))
+	R	:= 6371.0 //zemes spindulys kilometrais
+	dist	= R*c
 	return dist
 }
 
-func findNeighbourhood(lon,lat float64, boundSlice []geocode) []geocode{
+func findNeighbourhood(lat,lon float64, boundSlice []geocode) []geocode{
 	var d float64
-	d = 2000/6371
-	latMin :=math.Asin(math.Sin(toRadians(lat))* math.Cos(d) + math.Cos(toRadians(lat))*math.Sin(d)*math.Cos(0))
-	latMax :=math.Asin(math.Sin(toRadians(lat))* math.Cos(d) + math.Cos(toRadians(lat))*math.Sin(d)*math.Cos(math.Pi))
 
-	lonMin :=toRadians(lon) + math.Atan2(math.Sin(math.Pi/2)*math.Sin(d)*math.Cos(toRadians(lat)), math.Cos(d)-(math.Sin(toRadians(lat))*math.Sin(toRadians(lat))))
-	lonMax :=toRadians(lon) + math.Atan2(math.Sin(math.Pi*3/2)*math.Sin(d)*math.Cos(toRadians(lat)), math.Cos(d)-(math.Sin(toRadians(lat))*math.Sin(toRadians(lat))))
-	fmt.Println(toDegree(latMin))
-	fmt.Println(toDegree(latMax))
-	fmt.Println(toDegree(lonMin))
-	fmt.Println(toDegree(lonMax))
-	return boundSlice
+	var neighbourhood []geocode
+	d = 2000.0/6371.0
+
+	lonR	:= toRadians(lon)
+	latR	:= toRadians(lat)
+
+	latMaxR :=math.Asin(math.Sin(latR)*math.Cos(d) + math.Cos(latR)*math.Sin(d)*math.Cos(0))
+	latMinR :=math.Asin(math.Sin(latR)*math.Cos(d) + math.Cos(latR)*math.Sin(d)*math.Cos(math.Pi))
+	lonMaxR :=lonR + math.Atan2(math.Sin(math.Pi/2)*math.Sin(d)*math.Cos(latR), math.Cos(d)-(math.Sin(latR)*math.Sin(latR)))
+	lonMinR :=lonR + math.Atan2(math.Sin(math.Pi*3/2)*math.Sin(d)*math.Cos(latR), math.Cos(d)-(math.Sin(latR)*math.Sin(latR)))
+
+	latMin	:= toDegree(latMinR)
+	latMax	:= toDegree(latMaxR)
+	lonMin	:= toDegree(lonMinR)
+	lonMax	:= toDegree(lonMaxR)
+
+	for i:=range boundSlice{
+		breweryLat := boundSlice[i].lat
+		breweryLon := boundSlice[i].lon
+		if breweryLat > latMin && breweryLat < latMax && breweryLon > lonMin && breweryLon < lonMax{
+			neighbourhood = append(neighbourhood, boundSlice[i])
+		}
+	}
+	return neighbourhood
 }
 
-func greedyAlg(lon, lat float64, boundSlice []geocode) {
-	fmt.Println("ur mum gay")
-	neighbourhood := findNeighbourhood(lon, lat, boundSlice)
-	fmt.Println(neighbourhood[0])
+func greedyAlg(lat, lon float64, boundSlice []geocode) {
+	neighbourhood := findNeighbourhood(lat,lon, boundSlice)
+	fmt.Println(len(neighbourhood))
 }
 
 func main(){
-	lon,err := strconv.ParseFloat(os.Args[1],32)
-	lat,err := strconv.ParseFloat(os.Args[2],32)
+	lat,err := strconv.ParseFloat(os.Args[1],32)
+	lon,err := strconv.ParseFloat(os.Args[2],32)
+	fmt.Println(lat)
 	fmt.Println(lon)
 	//parsinu beers.csv
 	beerSlice := parseBeers()
@@ -182,9 +198,8 @@ func main(){
 
 	geocodeSlice = assignNames(geocodeSlice)
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
-	fmt.Println(geocodeSlice[0].name)
-	PrintBeers(boundSlice[2])
-	greedyAlg(lon, lat, boundSlice)
+	greedyAlg(lat, lon, boundSlice)
+	//greedyAlg(lon, lat, boundSlice)
 	if err!= nil{
 		fmt.Println(err)
 	}
