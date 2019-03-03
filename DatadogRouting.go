@@ -156,7 +156,7 @@ func findNeighbourhood(lat,lon float64, boundSlice []geocode) []geocode{
 	var d float64
 
 	var neighbourhood []geocode
-	d = 2000.0/6371.0
+	d = 900.0/6371.0
 
 	lonR	:= toRadians(lon)
 	latR	:= toRadians(lat)
@@ -186,8 +186,9 @@ func getBeerCount(loc geocode)int{
 }
 
 func greedyAlg(lat, lon float64, boundSlice []geocode) ([]geocode,[]beer) {
-//	neighbourhood := findNeighbourhood(lat,lon, boundSlice)
+	neighbourhood := findNeighbourhood(lat,lon, boundSlice)
 	fuel := 2000.0
+	fmt.Printf("Neighbourhood size: %d", len(neighbourhood))
 	var optimalPath []geocode
 	var beers []beer
 	home :=geocode{-1, -1, lat, lon, "", nil, "Home"}
@@ -215,51 +216,32 @@ func printSoln(soln []geocode, beers []beer, lat, lon float64){
 	}
 }
 //SF (beercountSF, optimalpathSF) reiskia So Far, kad atskirti variables
-func recursiveSoln(currentLoc, home geocode, neighbourhood, optimalPathSF []geocode, fuel float64, beersSF []beer) ([]geocode, []beer){
-
+func recursiveSoln(currentLoc, home geocode, neighbourhood, optimalPathSF []geocode, fuelSF float64, beersSF []beer) ([]geocode, []beer){
 	var paths [][]geocode
 	var beers [][]beer
-	var fuelsleft []float64
 
-
+	if (fuelSF<0) || (fuelSF <calcDist(home.lat, home.lon, currentLoc.lat, currentLoc.lon)){
+		return optimalPathSF, beersSF
+	}
+	optimalPathSF = append(optimalPathSF, currentLoc)
+	for i:=range currentLoc.beers{
+		beersSF = append(beersSF, currentLoc.beers[i])
+	}
 	for i:=range neighbourhood{
-		fuelleft :=fuel-calcDist(currentLoc.lat, currentLoc.lon, neighbourhood[i].lat, neighbourhood[i].lon)
-		reachable := calcDist(currentLoc.lat,currentLoc.lon,neighbourhood[i].lat,neighbourhood[i].lon) < fuel
-		homeable := calcDist(home.lat, home.lon, neighbourhood[i].lat, neighbourhood[i].lon) <fuelleft
-//		fmt.Println(reachable)
-//		fmt.Println(homeable)
-//		fmt.Println(fuel)
-		if (reachable&&homeable){
-			neighbourhoodNew := append(neighbourhood[:i], neighbourhood[i+1:]...)
-			beersThere := beersSF
-			for j:=range neighbourhood[i].beers{
-				beersThere = append(beersThere, neighbourhood[i].beers[j])
-			}
-			optimalPathThere := append(optimalPathSF, neighbourhood[i])
-			optimalPathI, beersI := recursiveSoln(neighbourhood[i], home,neighbourhoodNew, optimalPathThere,fuelleft,beersThere)
-			paths = append(paths, optimalPathI)
-			beers = append(beers, beersI)
-			fuelsleft = append(fuelsleft, fuelleft)
-			fmt.Printf("Recursiontag %d, %f, %d \n", len(beersI), fuelleft, len(optimalPathI))
-		}else{
-			paths = append(paths, optimalPathSF)
-			beers = append(beers, beersSF)
-			fuelsleft = append(fuelsleft, fuel)
-			fmt.Printf("hometag %d, %f, %d \n", len(beersSF), fuel, len(optimalPathSF))
-		}
+		nextNeighbourhood := append(neighbourhood[:i], neighbourhood[i+1:]...)
+		fuelAfterFlight := fuelSF - calcDist(currentLoc.lat, currentLoc.lon, neighbourhood[i].lat, neighbourhood[i].lon)
+		tempPath, tempBeers := recursiveSoln(neighbourhood[i], home, nextNeighbourhood, optimalPathSF, fuelAfterFlight, beersSF)
+		paths = append(paths, tempPath)
+		beers = append(beers, tempBeers)
 	}
 	optimalPath := paths[0]
 	optimalbeers := beers[0]
-	//optimalFuel := fuelsleft[0]
 	for i := range paths{
 		if len(beers[i]) > len(optimalbeers){
 			optimalPath = paths[i]
 			optimalbeers = beers[i]
-	//		optimalFuel = fuelsleft[i]
 		}
 	}
-	//fmt.Println(optimalFuel)
-	printSoln(optimalPath, optimalbeers, home.lat, home.lon)
 	return optimalPath, optimalbeers
 }
 
@@ -276,6 +258,8 @@ func main(){
 	geocodeSlice = assignNames(geocodeSlice)
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
 	solution, beers := greedyAlg(lat, lon, boundSlice)
+	//fmt.Println(solution)
+	//fmt.Println(beers)
 	printSoln(solution,beers,lat,lon)
 	//greedyAlg(lon, lat, boundSlice)
 	if err!= nil{
