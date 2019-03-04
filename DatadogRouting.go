@@ -1,13 +1,11 @@
 //
 //DatadogRouting.go
 //
-//Vytenis pirma karta naudoja Go, nes panasi i C, tad sansas kazka ismokti
 //Vytenis Sliogeris
 //Saltiniai sintaksei:
 //https://www.tutorialspoint.com/go/
 //https://gobyexample.com/command-line-arguments
 //https://golang.org/
-//Problema panasi i knapsack problema, tad kazka bandysim
 
 package main
 
@@ -39,8 +37,10 @@ type beer struct{
 	cat_id		int
 	style_id	int
 }
-//Dummy code algoritmui
-
+/*
+*Location - failas
+*Output = 2D array, kuris atspindetu excelyje atidaryta csv faila
+*/
 func getStrings(location string) [][]string{
 	B_content, err := ioutil.ReadFile(location)
 	reader := csv.NewReader(bytes.NewReader(B_content))
@@ -50,9 +50,11 @@ func getStrings(location string) [][]string{
 	}
 	return strings
 }
-
-func parseBeers() []beer {
-	S_beer := getStrings("dumps/beers.csv")
+/*
+*Visos parsing funkcijos panasios, gal butu imanoma padaryti koki mors polymorphism
+*/
+func parseBeers(location string) []beer {
+	S_beer := getStrings(location)
 	var beerSlice []beer
 	for i:=range S_beer{
 		if i!=0{
@@ -71,8 +73,8 @@ func parseBeers() []beer {
 	return beerSlice
 }
 
-func parseGeocodes() []geocode {
-	S_geocodes := getStrings("dumps/geocodes.csv")
+func parseGeocodes(location string) []geocode {
+	S_geocodes := getStrings(location)
 	var geocodeSlice []geocode
 	for i:=range S_geocodes{
 		if i!=0{
@@ -92,8 +94,8 @@ func parseGeocodes() []geocode {
 	return geocodeSlice
 }
 
-func assignNames(in []geocode) []geocode{
-	S_breweries	:= getStrings("dumps/breweries.csv")
+func assignNames(in []geocode, location string) []geocode{
+	S_breweries	:= getStrings(location)
 	geocodeSlice	:= in
 	for i:= range S_breweries{
 		if i!=0{
@@ -110,7 +112,13 @@ func assignNames(in []geocode) []geocode{
 	}
 	return geocodeSlice
 }
-
+/*
+* geocodeSlice: araus daryklu array
+* beerSlice : alaus array
+* Bandziau daryti kazka panasaus kaip 
+* FIND * WHERE geocode.ID == brewery.ID
+* 
+*/
 func bindBeersToBreweries(geocodeSlice []geocode, beerSlice []beer) []geocode{
 	outputGeocodeSlice := geocodeSlice
 	for i:=range beerSlice{
@@ -123,14 +131,9 @@ func bindBeersToBreweries(geocodeSlice []geocode, beerSlice []beer) []geocode{
 	}
 	return outputGeocodeSlice
 }
-
-
-func PrintBeers(slice geocode){
-	beerSlice := slice.beers
-	for i:=range beerSlice{
-		fmt.Println(beerSlice[i].name)
-	}
-}
+/*
+*Matematines funkcijos versti i radianus ir i laipsnius
+*/
 func toRadians(deg float64) float64{
 	return deg*math.Pi/180
 }
@@ -138,53 +141,139 @@ func toRadians(deg float64) float64{
 func toDegree(rad float64) float64{
 	return rad * 180 / math.Pi
 }
-//Pritaikau Inverse Haversine formule
-func calcDist(lon1, lat1, lon2, lat2 float64) float64{
+/*
+*Pritaikau Inverse Haversine formule
+*Sirdingas aciu https://www.movable-type.co.uk/scripts/latlong.html
+*/
+func calcDist(lat1, lon1, lat2, lon2 float64) float64{
 	var dist float64
-	lon1R := toRadians(lon1)
-	lon2R := toRadians(lon2)
-	lat1R := toRadians(lat1)
-	lat2R := toRadians(lat2)
-	R := 6371.0 //zemes spindulys kilometrais
-	dist = 2.0 * R * math.Asin(math.Sqrt(math.Sin((lat2R-lat1R)/2)*math.Sin((lat2R-lat1R)/2) + math.Cos(lat1R)*math.Cos(lat2R)*math.Sin((lon2R-lon1R)/2)*math.Sin((lon2R-lon1R)/2)))
+	lon1R	:= toRadians(lon1)
+	lon2R	:= toRadians(lon2)
+	lat1R	:= toRadians(lat1)
+	lat2R	:= toRadians(lat2)
+	a	:= math.Sin((lat2R-lat1R)/2)*math.Sin((lat2R-lat1R)/2) + math.Cos(lat1R)*math.Cos(lat2R) * math.Sin((lon2R-lon1R)/2)*math.Sin((lon2R-lon1R)/2)
+	c	:= 2 *  math.Atan2(math.Sqrt(a),math.Sqrt(1-a))
+	R	:= 6371.0 //zemes spindulys kilometrais
+	dist	= R*c
 	return dist
 }
-
-func findNeighbourhood(lon,lat float64, boundSlice []geocode) []geocode{
-	var d float64
-	d = 2000/6371
-	latMin :=math.Asin(math.Sin(toRadians(lat))* math.Cos(d) + math.Cos(toRadians(lat))*math.Sin(d)*math.Cos(0))
-	latMax :=math.Asin(math.Sin(toRadians(lat))* math.Cos(d) + math.Cos(toRadians(lat))*math.Sin(d)*math.Cos(math.Pi))
-
-	lonMin :=toRadians(lon) + math.Atan2(math.Sin(math.Pi/2)*math.Sin(d)*math.Cos(toRadians(lat)), math.Cos(d)-(math.Sin(toRadians(lat))*math.Sin(toRadians(lat))))
-	lonMax :=toRadians(lon) + math.Atan2(math.Sin(math.Pi*3/2)*math.Sin(d)*math.Cos(toRadians(lat)), math.Cos(d)-(math.Sin(toRadians(lat))*math.Sin(toRadians(lat))))
-	fmt.Println(toDegree(latMin))
-	fmt.Println(toDegree(latMax))
-	fmt.Println(toDegree(lonMin))
-	fmt.Println(toDegree(lonMax))
-	return boundSlice
+/*
+*
+*lat - pradine latitude
+*lon - pradine longitude(?)
+*boundSlice - basically "database"
+*
+*returns - array of geocodes kurie yra geriausias kelias
+*	 - array of beers kuriuos surinko
+*
+*/
+func greedyAlg(lat, lon float64, boundSlice []geocode) ([]geocode,[]beer) {
+	fuel := 2000.0
+	var optimalPath []geocode
+	var beers []beer
+	home :=geocode{-1, -1, lat, lon, "", nil, "Home"}
+	optimalPath, beers = recursiveSoln(home, home, boundSlice, optimalPath, fuel,beers)
+	optimalPath = append(optimalPath, home)
+	return optimalPath, beers
+}
+/*
+*Funkcija kuri panasiai printina kaip duotose skaidrese
+*/
+func printSoln(soln []geocode, beers []beer, lat, lon float64){
+	if(len(soln)==0){
+		fmt.Println("No nearby breweries found")
+	}else{
+		var distTravelled float64
+		fmt.Printf("Went through %d breweries\n", len(soln))
+		distTravelled = distTravelled + calcDist(lat, lon, soln[0].lat, soln[0].lon)
+		for i:=range soln{
+			if i!=0{
+			step:=calcDist(soln[i-1].lat,soln[i-1].lon,soln[i].lat,soln[i].lon)
+			distTravelled = distTravelled + step
+				fmt.Printf("%s -[%f]->%s\n",soln[i-1].name,step, soln[i].name)
+			}
+		}
+		distTravelled = distTravelled + calcDist(lat, lon, soln[len(soln)-1].lat, soln[len(soln)-1].lon)
+		fmt.Printf("Total distnace travelled: %f\n",distTravelled)
+		fmt.Printf("Found %d beers\n", len(beers))
+		for i:=range beers{
+			fmt.Printf("%s\n", beers[i].name)
+		}
+	}
+}
+/*
+*Paties rasyta delete funkcija, nes kitaip neisimami reikiami elementai. Tad surandu juos pagal ID
+*/
+func remove(set []geocode, element geocode) []geocode{
+	var index int
+	for i:=range set{
+		if set[i].brewery_id == element.brewery_id{
+			index = i
+		}
+	}
+	outputset:=append(set[:index], set[index+1:]...)
+	return outputset
+}
+/*
+*
+*currentLoc - brewery, kuriame esame
+*home - namu lokacija. Galetu buti ir global variable
+*neighbourhood - neistyrinetu daryklu kolekcija
+*optimalPathSF - kelias iki sitos daryklos
+*fuelSF - degalai kuriuos turime sitoje darykloje
+*beerSF - alus, kuri surinkome visose daryklose iki sitos
+*
+*grazina kelia, davusi daugiausia alaus is currentLoc i neighbourhood kaip geocode array
+*Bei grazina alu kaip beer array
+*
+*Algoritmas yra basically brute force, nes neissiaiskinau kitokio budo surasti daugiausia alaus duodanti kelia
+*laikas turetu buti daugmaz O(n!), mat su kiekviena aplankyta darykla lieka (n-1) daryklu dar tyrinejimui. Taip gaunasi kad is viso apieskome:
+* n(n-1)(n-2)...*3*2
+*
+*/
+func recursiveSoln(currentLoc, home geocode, neighbourhood, optimalPathSF []geocode, fuelSF float64, beersSF []beer) ([]geocode, []beer){
+	var bestPath []geocode
+	var bestBeer []beer
+	if (fuelSF<0) || (fuelSF <calcDist(home.lat, home.lon, currentLoc.lat, currentLoc.lon)){
+		return optimalPathSF, beersSF //base case, returnint su kuo atejau nieko nekeites, nes pasiektas dead end
+	}
+	optimalPathInHere := append(optimalPathSF, currentLoc) //nera dead end, prisegam sita prie optimal path
+	beersInHere := beersSF
+	for i:=range currentLoc.beers{
+		beersInHere = append(beersInHere, currentLoc.beers[i]) //prisegame alus prie optimal path
+	}
+	for i:=range neighbourhood{//einam per visus pasiekiamus kaimynus ir pritaikome algoritma
+		nextNeighbourhood := remove(neighbourhood, currentLoc) //isimame kita darykla is neistyrinetu sarasu
+		fuelAfterFlight := fuelSF - calcDist(currentLoc.lat, currentLoc.lon, neighbourhood[i].lat, neighbourhood[i].lon)
+		tempPath, tempBeers := recursiveSoln(neighbourhood[i], home, nextNeighbourhood, optimalPathInHere, fuelAfterFlight, beersInHere)
+		if len(tempBeers) > len(bestBeer){//laikome atmintyje geriausia kelia, veliau ji returninsime atgal i virsu
+			bestBeer = tempBeers
+			bestPath = tempPath
+		}
+	}
+	return bestPath, bestBeer
 }
 
-func greedyAlg(lon, lat float64, boundSlice []geocode) {
-	fmt.Println("ur mum gay")
-	neighbourhood := findNeighbourhood(lon, lat, boundSlice)
-	fmt.Println(neighbourhood[0])
-}
 
+/*
+* Pirmas arg yra Latitude
+* Antras arg yra Longitude
+*/
 func main(){
-	lon,err := strconv.ParseFloat(os.Args[1],32)
-	lat,err := strconv.ParseFloat(os.Args[2],32)
-	fmt.Println(lon)
+	lat,err := strconv.ParseFloat(os.Args[1],32)
+	lon,err := strconv.ParseFloat(os.Args[2],32)
+	fmt.Printf("%f/%f\n",lat,lon)
 	//parsinu beers.csv
-	beerSlice := parseBeers()
+	beerSlice := parseBeers("dumps/beers.csv")
 	//Parsinu geocodes.csv
-	geocodeSlice := parseGeocodes()
-
-	geocodeSlice = assignNames(geocodeSlice)
+	geocodeSlice := parseGeocodes("dumps/geocodes.csv")
+	//Duodu vardus visom daryklom
+	geocodeSlice = assignNames(geocodeSlice,"dumps/breweries.csv")
+	//Prie kiekvienos daryklos prikabinu alus
 	boundSlice := bindBeersToBreweries(geocodeSlice,beerSlice)
-	fmt.Println(geocodeSlice[0].name)
-	PrintBeers(boundSlice[2])
-	greedyAlg(lon, lat, boundSlice)
+	//Issprendziam uzduoti
+	solution, beers := greedyAlg(lat, lon, boundSlice)
+	printSoln(solution,beers,lat,lon)
 	if err!= nil{
 		fmt.Println(err)
 	}
